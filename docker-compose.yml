@@ -1,0 +1,38 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: keycloak-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - keycloak
+    networks:
+      - keycloak-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # Tell Keycloak the public-facing URL (nginx is the entry point)
+      KC_HOSTNAME: http://localhost
+      KC_HOSTNAME_STRICT: false
+      # Enable HTTP between nginx and Keycloak (TLS is terminated at nginx)
+      KC_HTTP_ENABLED: true
+      # Trust X-Forwarded-* headers from the proxy
+      KC_PROXY_HEADERS: xforwarded
+      # Log login events
+      KC_LOG_LEVEL: "INFO,org.keycloak.events:DEBUG"
+    # Keycloak is NOT exposed directly; all traffic goes through nginx
+    expose:
+      - "8080"
+    command: start-dev
+    networks:
+      - keycloak-net
+
+networks:
+  keycloak-net:
+    driver: bridge
